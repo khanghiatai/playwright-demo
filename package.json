@@ -1,0 +1,30 @@
+{
+  "name": "playwright-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "login": "npx playwright test src/setup/auth-ui.setup.ts",
+    "login:api": "npx playwright test src/setup/auth-api.setup.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khanghiatai/playwright-demo.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/khanghiatai/playwright-demo/issues"
+  },
+  "homepage": "https://github.com/khanghiatai/playwright-demo#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.1",
+    "@types/node": "^25.2.1"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^7.6.0",
+    "dotenv": "^17.2.4"
+  }
+}

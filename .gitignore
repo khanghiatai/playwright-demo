@@ -1,0 +1,42 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+config/
+.env
+.env.*.local
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build / output
+dist/
+build/
+coverage/
+.nyc_output/
+.cache/
+
+# Playwright / test artifacts (generated outputs)
+playwright-report/
+test-results/
+screenshots/
+videos/
+traces/
+*.trace
+*.zip
+
+# Per-run storage/state/auth files (may contain secrets)
+storageState.json
+*.auth
+playwright/.auth/
+
+# Logs / misc
+debug.log

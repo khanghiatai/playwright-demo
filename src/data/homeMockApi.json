@@ -1,0 +1,24 @@
+{
+    "articles": [
+        {
+            "slug": "1770524531339-46204",
+            "title": "Happy Lunar New year",
+            "description": "Chúc mừng năm mới, 1 năm mới may mắn, thuận lợi và có thật nhiều tiền",
+            "body": "markdown",
+            "tagList": [
+                "my-love", "tai-kha"
+            ],
+            "createdAt": "2026-02-08T04:22:11.975Z",
+            "updatedAt": "2026-02-08T04:22:11.975Z",
+            "favorited": true,
+            "favoritesCount": 999,
+            "author": {
+                "username": "Chúc Mừng Năm Mới",
+                "bio": null,
+                "image": "src/assets/images/boconganh.png",
+                "following": false
+            }
+        }
+    ],
+    "articlesCount": 1
+}
