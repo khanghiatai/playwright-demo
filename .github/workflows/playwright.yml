@@ -2,8 +2,7 @@ name: Playwright Tests
 on:
   push:
     branches: [ main, develop ]
-    tags:
-      - 'v*'
+
   pull_request:
     branches: [ main, develop ]
 jobs:
@@ -11,10 +10,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     
-    environment: >
-      ${{ startsWith(github.ref, 'refs/tags/') && 'prod'
-          || github.ref == 'refs/heads/main' && 'staging'
-          || 'dev' }}
+    environment: staging
 
     env:
       ENV: ${{ vars.ENV }}
