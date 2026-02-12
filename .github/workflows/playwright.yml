@@ -1,16 +1,26 @@
 name: Playwright Tests
+
 on:
   push:
     branches: [ main, develop ]
 
   merge_group:
     branches: [ main, develop ]
+
+  # 👉 Cron chạy mỗi ngày
+  schedule:
+    - cron: '15 1 * * *'   # 08:15 giờ VN
+
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
-    
-    environment: staging
+
+    # 👉 Cron chặn không cho cron chạy main
+    if: ${{ github.event_name != 'schedule' || github.ref_name == 'develop' }}
+
+    # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
+    environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' }}
 
     env:
       ENV: ${{ vars.ENV }}
@@ -18,9 +28,12 @@ jobs:
       EMAIL: ${{ secrets.EMAIL }}
       PASSWORD: ${{ secrets.PASSWORD }}
 
-
     steps:
+    # 👉 Cron checkout develop
     - uses: actions/checkout@v5
+      with:
+        ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
+
     - uses: actions/setup-node@v5
       with:
         node-version: lts/*
