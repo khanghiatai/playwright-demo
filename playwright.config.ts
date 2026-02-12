@@ -3,7 +3,13 @@ import * as dotenv from 'dotenv'
 import path from 'path';
 
 const env = process.env.ENV || 'staging'
-dotenv.config({path: path.resolve(__dirname, `config/.env.${env}`), override: true,})
+// dotenv.config({path: path.resolve(__dirname, `config/.env.${env}`), override: true,})
+
+if (!process.env.CI) {
+  dotenv.config({
+    path: path.resolve(__dirname, `config/.env.${env}`)
+  })
+}
 
 /**
  * Read environment variables from file.
