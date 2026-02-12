@@ -42,7 +42,7 @@ export default defineConfig({
     extraHTTPHeaders: {
       'Authorization': `Bearer ${process.env.ACCEPT_TOKEN}`
     },
-    headless: false,
+    headless: process.env.CI ? true : false,
     launchOptions: {
       // slowMo: 2_500
     },
