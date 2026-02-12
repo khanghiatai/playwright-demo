@@ -38,7 +38,7 @@ export default defineConfig({
     },
     headless: false,
     launchOptions: {
-      slowMo: 2_500
+      // slowMo: 2_500
     },
     actionTimeout: 5_000,
     navigationTimeout: 20_000,
@@ -52,7 +52,7 @@ export default defineConfig({
   projects: [
     {
       name: 'auth-setup',
-      testMatch: 'auth-ui.setup.ts'
+      testMatch: 'auth-api.setup.ts'
     }, 
     {
       name: 'chromium',
