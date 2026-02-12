@@ -4,7 +4,6 @@ import { ArticleManager } from '../managers/article.manager'
 
 type ArticleFixture = {
     articleFixture: string
-    slugId: string
     articleManager: ArticleManager
 }
 
