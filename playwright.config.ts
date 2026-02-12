@@ -58,7 +58,7 @@ export default defineConfig({
   projects: [
     {
       name: 'auth-setup',
-      testMatch: 'auth-ui.setup.ts'
+      testMatch: 'auth-api.setup.ts'
     }, 
     {
       name: 'chromium',
