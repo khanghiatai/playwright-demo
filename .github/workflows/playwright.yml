@@ -98,7 +98,7 @@ jobs:
       - name: Prepare blob reports
         run: |
           mkdir merged-blobs
-          find all-blob-reports -name "*.zip" -exec cp {} merged-blobs/ \;
+          find all-blob-reports -type f -exec cp {} merged-blobs/ \;
 
       # 👉 Merge thành HTML duy nhất
       - name: Merge reports thành HTML duy nhất
