@@ -9,7 +9,7 @@ on:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: '16 5 * * *'   # 12:16 giờ VN
+    - cron: '*/5 * * * *'   # run mỗi 5p
 
 jobs:
   test:
