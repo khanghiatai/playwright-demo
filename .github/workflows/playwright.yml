@@ -24,11 +24,11 @@ jobs:
     # ✅ FIX: viết 1 dòng để tránh lỗi YAML
     environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' }}
 
-    # 👉 Chia test thành 3 shard để chạy song song
+    # 👉 Chia test thành 4 shard để chạy song song
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
 
     env:
       ENV: ${{ vars.ENV }}
@@ -59,7 +59,7 @@ jobs:
       - name: Run Playwright tests (Shard ${{ matrix.shard }})
         run: |
           npx playwright test \
-            --shard=${{ matrix.shard }}/3 \
+            --shard=${{ matrix.shard }}/4 \
             --reporter=blob \
             --retries=1
 
@@ -94,12 +94,18 @@ jobs:
         with:
           path: all-blob-reports
 
+      # 👉 FIX: Flatten tất cả file blob report vào 1 folder chung
+      - name: Prepare blob reports
+        run: |
+          mkdir merged-blobs
+          find all-blob-reports -name "*.zip" -exec cp {} merged-blobs/ \;
+
       # 👉 Merge thành HTML duy nhất
       - name: Merge reports thành HTML duy nhất
         run: |
           npx playwright merge-reports \
             --reporter html \
-            ./all-blob-reports
+            ./merged-blobs
 
       # 👉 Upload HTML report (để download thủ công nếu cần)
       - name: Upload final HTML report
