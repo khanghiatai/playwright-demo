@@ -9,16 +9,17 @@ on:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: '40 4 * * *'   # 08:15 giờ VN
+    - cron: '10 5 * * *'   # 12:10 giờ VN
 
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-
     # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
-    environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' }}
+    # ✅ FIX: dùng github.ref thay vì github.ref_name
+    # ✅ FIX: viết 1 dòng để tránh lỗi YAML
+    environment: ${{ github.event_name == 'schedule' && 'staging' || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') }}
 
     env:
       ENV: ${{ vars.ENV }}
@@ -28,9 +29,10 @@ jobs:
 
     steps:
     # 👉 Cron checkout develop
+    # ✅ FIX: dùng github.ref thay vì github.ref_name
     - uses: actions/checkout@v5
       with:
-        ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
+        ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
 
     - uses: actions/setup-node@v5
       with:
