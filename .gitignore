@@ -35,8 +35,8 @@ traces/
 
 # Per-run storage/state/auth files (may contain secrets)
 storageState.json
-.auth/
-playwright/.auth/
+# .auth/
+# playwright/.auth/
 
 # Logs / misc
 debug.log
