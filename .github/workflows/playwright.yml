@@ -2,17 +2,17 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
   merge_group:
-    branches: [ main, develop ]
-  
+    branches: [main, develop]
+
   # re-register cron
   workflow_dispatch:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: '*/5 * * * *'   # run mỗi 5p
+    - cron: "*/5 * * * *" # run mỗi 5p
 
 jobs:
   test:
@@ -22,33 +22,114 @@ jobs:
     # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
     # ✅ FIX: dùng github.ref thay vì github.ref_name
     # ✅ FIX: viết 1 dòng để tránh lỗi YAML
-    environment: ${{ github.event_name == 'schedule' && 'staging' || (github.ref == 'refs/heads/main' && 'production') || (github.ref == 'refs/heads/develop' && 'staging') }}
+    environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/develop' && 'staging' }}
+
+    # 👉 Chia test thành 3 shard để chạy song song
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
 
     env:
       ENV: ${{ vars.ENV }}
-      BASE_URL: ${{ vars.BASE_URL }}
+      BASE_URL: ${{ vars.BASE_URL }} # ✅ NEW: Base URL cho Playwright (production/staging tùy environment)
       EMAIL: ${{ secrets.EMAIL }}
       PASSWORD: ${{ secrets.PASSWORD }}
 
     steps:
-    # 👉 Cron checkout develop
-    # ✅ FIX: dùng github.ref thay vì github.ref_name
-    - uses: actions/checkout@v5
-      with:
-        ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
+      # 👉 Cron checkout develop
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
 
-    - uses: actions/setup-node@v5
-      with:
-        node-version: lts/*
-    - name: Install dependencies
-      run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report-${{ vars.ENV }}
-        path: playwright-report/
-        retention-days: 30
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      # 👉 Chạy test theo shard + tạo blob report để merge sau
+      - name: Run Playwright tests (Shard ${{ matrix.shard }})
+        run: |
+          npx playwright test \
+            --shard=${{ matrix.shard }}/3 \
+            --reporter=blob \
+            --retries=1
+
+      # 👉 Upload blob report tạm thời (dùng để merge)
+      - name: Upload blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shard }}
+          path: blob-report
+          retention-days: 1
+
+  # 👉 Merge tất cả shard thành 1 HTML report duy nhất
+  merge-report:
+    if: always()
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 👉 Download toàn bộ blob report từ các shard
+      - name: Download blob reports
+        uses: actions/download-artifact@v4
+        with:
+          path: all-blob-reports
+
+      # 👉 Merge thành HTML duy nhất
+      - name: Merge reports thành HTML duy nhất
+        run: |
+          npx playwright merge-reports \
+            --reporter html \
+            ./all-blob-reports
+
+      # 👉 Upload HTML report (để download thủ công nếu cần)
+      - name: Upload final HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ vars.ENV }}
+          path: playwright-report
+          retention-days: 30
+
+  # 👉 Deploy report lên GitHub Pages (chỉ main)
+  deploy-report:
+    needs: merge-report
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Download final report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report-${{ vars.ENV }}
+          path: ./public
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
