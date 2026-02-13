@@ -16,9 +16,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-    # 👉 Cron chặn không cho cron chạy main
-    if: ${{ github.event_name != 'schedule' || github.ref_name == 'develop' }}
-
+    
     # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
     environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' }}
 
