@@ -12,7 +12,7 @@ on:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: "*/5 * * * *" # run mỗi 5p
+    - cron: "0 1 * * *" 
 
 jobs:
   test:
@@ -139,3 +139,27 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
+        
+      - name: Send Slack notification
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{
+            \"attachments\": [
+              {
+                \"color\": \"${{ steps.notify_data.outputs.color }}\",
+                \"title\": \"Playwright CI ${{ steps.notify_data.outputs.status }}\",
+                \"fields\": [
+                  {\"title\": \"Repository\", \"value\": \"${{ steps.notify_data.outputs.repo }}\", \"short\": true},
+                  {\"title\": \"Branch\", \"value\": \"${{ steps.notify_data.outputs.branch }}\", \"short\": true},
+                  {\"title\": \"Environment\", \"value\": \"${{ vars.ENV }}\", \"short\": true},
+                  {\"title\": \"BASE_URL\", \"value\": \"${{ vars.BASE_URL }}\", \"short\": false},
+                  {\"title\": \"Passed\", \"value\": \"${{ steps.notify_data.outputs.passed }}\", \"short\": true},
+                  {\"title\": \"Failed\", \"value\": \"${{ steps.notify_data.outputs.failed }}\", \"short\": true},
+                  {\"title\": \"Skipped\", \"value\": \"${{ steps.notify_data.outputs.skipped }}\", \"short\": true},
+                  {\"title\": \"Actions\", \"value\": \"${{ steps.notify_data.outputs.action_url }}\", \"short\": false},
+                  {\"title\": \"Report\", \"value\": \"${{ steps.notify_data.outputs.pages_url }}\", \"short\": false}
+                ]
+              }
+            ]
+          }" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
