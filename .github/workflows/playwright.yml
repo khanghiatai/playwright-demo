@@ -147,47 +147,39 @@ jobs:
     environment: slack
 
     steps:
-      - name: Send Slack notification
-        run: |
-          RESULT="${{ needs.test.result }}"
-          PASSED="${{ needs.test.outputs.passed }}"
-          FAILED="${{ needs.test.outputs.failed }}"
-          SKIPPED="${{ needs.test.outputs.skipped }}"
+    - name: Send Slack notification
+      run: |
+        RESULT="${{ job.status }}"
 
-          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+        if [ "$RESULT" = "success" ]; then
+          STATUS="PASSED"
+          COLOR="#36a64f"
+          ICON="✅"
+        else
+          STATUS="FAILED"
+          COLOR="#ff0000"
+          ICON="❌"
+        fi
 
-          if [ "$RESULT" = "success" ]; then
-            STATUS="PASSED"
-            COLOR="#36a64f"
-            ICON="✅"
-          else
-            STATUS="FAILED"
-            COLOR="#ff0000"
-            ICON="❌"
-          fi
+        ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
+        WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
 
-          curl -X POST \
-            -H "Content-type: application/json" \
-            --data "{
-              \"attachments\": [
-                {
-                  \"color\": \"$COLOR\",
-                  \"title\": \"$ICON Playwright CI $STATUS\",
-                  \"fields\": [
-                    {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
-                    {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
-                    {\"title\": \"Environment\", \"value\": \"${{ vars.ENV }}\", \"short\": true},
-                    {\"title\": \"BASE_URL\", \"value\": \"${{ vars.BASE_URL }}\", \"short\": false},
-                    {\"title\": \"Passed\", \"value\": \"$PASSED\", \"short\": true},
-                    {\"title\": \"Failed\", \"value\": \"$FAILED\", \"short\": true},
-                    {\"title\": \"Skipped\", \"value\": \"$SKIPPED\", \"short\": true},
-                    {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
-                    {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
-                  ]
-                }
-              ]
-            }" \
-            "$WEBHOOK"
+        curl -X POST \
+          -H "Content-type: application/json" \
+          --data "{
+            \"attachments\": [
+              {
+                \"color\": \"$COLOR\",
+                \"title\": \"$ICON Playwright CI $STATUS\",
+                \"fields\": [
+                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                  {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                  {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
+                  {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
+                ]
+              }
+            ]
+          }" \
+          "$WEBHOOK"
