@@ -9,14 +9,14 @@ on:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: '15 1 * * *'   # 08:15 giờ VN
+    - cron: '18 8 * * *'   # 08:15 giờ VN
 
 jobs:
   test:
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-    
+
     # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
     environment: ${{ github.event_name == 'schedule' && 'staging' || github.ref_name == 'main' && 'production' || github.ref_name == 'develop' && 'staging' }}
 
