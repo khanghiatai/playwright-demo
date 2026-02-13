@@ -141,7 +141,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   notify:
-    needs: test
+    needs: deploy-report
     runs-on: ubuntu-latest
     if: always()
     environment: slack
