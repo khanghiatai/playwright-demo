@@ -139,16 +139,34 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
-        
+
   notify:
     needs: test
     runs-on: ubuntu-latest
     if: always()
-    environment: slack   # 👈 dùng env riêng cho notify
+    environment: slack
 
     steps:
       - name: Send Slack notification
         run: |
+          RESULT="${{ needs.test.result }}"
+          PASSED="${{ needs.test.outputs.passed }}"
+          FAILED="${{ needs.test.outputs.failed }}"
+          SKIPPED="${{ needs.test.outputs.skipped }}"
+
+          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+
+          if [ "$RESULT" = "success" ]; then
+            STATUS="PASSED"
+            COLOR="#36a64f"
+            ICON="✅"
+          else
+            STATUS="FAILED"
+            COLOR="#ff0000"
+            ICON="❌"
+          fi
+
           WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
 
           curl -X POST \
@@ -156,15 +174,20 @@ jobs:
             --data "{
               \"attachments\": [
                 {
-                  \"color\": \"#36a64f\",
-                  \"title\": \"Playwright CI Result\",
+                  \"color\": \"$COLOR\",
+                  \"title\": \"$ICON Playwright CI $STATUS\",
                   \"fields\": [
                     {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
                     {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
-                    {\"title\": \"Run\", \"value\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"short\": false}
+                    {\"title\": \"Environment\", \"value\": \"${{ vars.ENV }}\", \"short\": true},
+                    {\"title\": \"BASE_URL\", \"value\": \"${{ vars.BASE_URL }}\", \"short\": false},
+                    {\"title\": \"Passed\", \"value\": \"$PASSED\", \"short\": true},
+                    {\"title\": \"Failed\", \"value\": \"$FAILED\", \"short\": true},
+                    {\"title\": \"Skipped\", \"value\": \"$SKIPPED\", \"short\": true},
+                    {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
+                    {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
                   ]
                 }
               ]
             }" \
             "$WEBHOOK"
-
