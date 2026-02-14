@@ -21,7 +21,7 @@ test.describe('Test API & UI', () => {
         await manager.artile().updateArticlePage()
         
         // call API delete
-        await articleApi.deleteArticle(slug)
+        await articleApi.deleteArticle('123')
     })
 })
 
