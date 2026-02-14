@@ -44,7 +44,7 @@ jobs:
     # - merge_group tạo ref đặc biệt
     # - tránh sai khi dùng github.ref_name
     # -------------------------------------------------
-    environment: ${{ github.event_name == 'schedule' && 'staging' || startsWith(github.ref, 'refs/heads/main') && 'staging' || startsWith(github.ref, 'refs/heads/develop') && 'develop' }}
+    environment: ${{ github.event_name == 'schedule' && 'staging' || github.event_name == 'merge_group' && github.event.merge_group.base_ref == 'main' && 'staging' || github.event_name == 'merge_group' && github.event.merge_group.base_ref == 'develop' && 'develop' || startsWith(github.ref, 'refs/heads/main') && 'staging' || startsWith(github.ref, 'refs/heads/develop') && 'develop' }}
 
     # -------------------------------------------------
     # Chạy song song 4 shard
@@ -254,7 +254,7 @@ jobs:
             ICON="❌"
           fi
 
-          BRANCH="${{ github.ref_name }}"
+          BRANCH="${{ github.event_name == 'merge_group' && github.event.merge_group.base_ref || github.ref_name }}"
 
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
@@ -302,7 +302,7 @@ jobs:
             ICON="❌"
           fi
 
-          BRANCH="${{ github.ref_name }}"
+          BRANCH="${{ github.event_name == 'merge_group' && github.event.merge_group.base_ref || github.ref_name }}"
 
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
@@ -318,4 +318,3 @@ jobs:
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
             --data-urlencode text="$MESSAGE"
-
