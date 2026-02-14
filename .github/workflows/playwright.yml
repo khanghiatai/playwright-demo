@@ -244,7 +244,7 @@ jobs:
         run: |
           RESULT="${{ needs.merge-report.result }}"
 
-          if [ "$RESULT" = "success" ]
+          if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
             COLOR="#36a64f"
             ICON="✅"
@@ -263,21 +263,23 @@ jobs:
 
           curl -X POST \
             -H "Content-type: application/json" \
-            --data "{
-              \"attachments\": [
+            --data @- \
+            "$WEBHOOK" <<EOF
+            {
+              "attachments": [
                 {
-                  \"color\": \"$COLOR\",
-                  \"title\": \"Playwright CI $STATUS $ICON\",
-                  \"fields\": [
-                    {\"title\": \"• Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
-                    {\"title\": \"• Branch\", \"value\": \"$BRANCH\", \"short\": true},
-                    {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
-                    {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
+                  "color": "$COLOR",
+                  "title": "Playwright CI $STATUS $ICON",
+                  "fields": [
+                    { "title": "• Repository", "value": "${{ github.repository }}", "short": true },
+                    { "title": "• Branch", "value": "$BRANCH", "short": true },
+                    { "title": "Actions", "value": "$ACTION_URL", "short": false },
+                    { "title": "Report", "value": "$REPORT_URL", "short": false }
                   ]
                 }
               ]
-            }" \
-            "$WEBHOOK"
+            }
+            EOF
 
 
   # -------------------------------------------------
@@ -294,13 +296,11 @@ jobs:
         run: |
           RESULT="${{ needs.merge-report.result }}"
 
-          if [ "$RESULT" = "success" ]
+          if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
-            COLOR="#36a64f"
             ICON="✅"
           else
             STATUS="FAILED"
-            COLOR="#ff0000"
             ICON="❌"
           fi
 
@@ -309,14 +309,15 @@ jobs:
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          MESSAGE=$(printf "🎭 Playwright CI %s %s\n\n• Repository: %s\n• Branch: %s\n\n🔗 Actions: %s\n📈 Report: %s" \
+          MESSAGE=$(printf "<b>🎭 Playwright CI %s %s</b>\n\nRepository: %s\nBranch: %s\n\n🔗 Actions: %s\n📈 Report: %s" \
             "$STATUS" \
             "$ICON" \
-            " ${{ github.repository }}" \
-            " $BRANCH" \
+            "${{ github.repository }}" \
+            "$BRANCH" \
             "$ACTION_URL" \
             "$REPORT_URL")
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
             -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d parse_mode="HTML" \
             --data-urlencode text="$MESSAGE"
