@@ -111,17 +111,18 @@ jobs:
       - name: Merge reports thành HTML duy nhất
         run: |
           npx playwright merge-reports \
-            --reporter html \
-            ./merged-blobs
+          --reporter html,json \
+          ./merged-blobs
+
 
       # ✅ Extract summary từ report đã merge (FULL DATA)
       - name: Extract final summary
         id: summary
         run: |
-          if [ -f playwright-report/data/test-results.json ]; then
-            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/data/test-results.json)
-            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/data/test-results.json)
-            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/data/test-results.json)
+          if [ -f playwright-report/test-results.json ]; then
+            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/test-results.json)
+            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/test-results.json)
+            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/test-results.json)
           else
             PASSED=0
             FAILED=0
@@ -132,13 +133,13 @@ jobs:
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
-      # 👉 Upload HTML report (để download thủ công nếu cần)
-      - name: Upload final HTML report
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report-${{ vars.ENV }}
-          path: playwright-report
-          retention-days: 30
+            # 👉 Upload HTML report (để download thủ công nếu cần)
+            - name: Upload final HTML report
+              uses: actions/upload-artifact@v4
+              with:
+                name: playwright-report-${{ vars.ENV }}
+                path: playwright-report
+                retention-days: 30
 
 
   # 👉 Deploy report lên GitHub Pages (chỉ main)
