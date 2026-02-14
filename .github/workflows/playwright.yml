@@ -241,7 +241,10 @@ jobs:
 
     steps:
       - name: Send Slack notification
+        shell: bash
         run: |
+          set -e
+
           RESULT="${{ needs.merge-report.result }}"
 
           if [ "$RESULT" = "success" ]; then
@@ -259,29 +262,27 @@ jobs:
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
-
-          curl -X POST \
+          curl -s -X POST \
             -H "Content-type: application/json" \
             --data @- \
-            "$WEBHOOK" <<EOF
-            {
-              "attachments": [
-                {
-                  "color": "$COLOR",
-                  "title": "Playwright CI $STATUS $ICON",
-                  "fields": [
-                    { "title": "• Repository", "value": "${{ github.repository }}", "short": true },
-                    { "title": "• Branch", "value": "$BRANCH", "short": true },
-                    { "title": "Actions", "value": "$ACTION_URL", "short": false },
-                    { "title": "Report", "value": "$REPORT_URL", "short": false }
-                  ]
-                }
-              ]
-            }
-            EOF
+            "${{ secrets.SLACK_WEBHOOK_URL }}" <<EOF
+          {
+            "attachments": [
+              {
+                "color": "$COLOR",
+                "title": "Playwright CI $STATUS $ICON",
+                "fields": [
+                  { "title": "Repository", "value": "${{ github.repository }}", "short": true },
+                  { "title": "Branch", "value": "$BRANCH", "short": true },
+                  { "title": "Actions", "value": "$ACTION_URL", "short": false },
+                  { "title": "Report", "value": "$REPORT_URL", "short": false }
+                ]
+              }
+            ]
+          }
+          EOF
 
-
+          
   # -------------------------------------------------
   # Gửi thông báo Telegram
   # -------------------------------------------------
