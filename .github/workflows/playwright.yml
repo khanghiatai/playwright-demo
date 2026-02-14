@@ -191,13 +191,18 @@ jobs:
 
   # -------------------------------------------------
   # Deploy report lên GitHub Pages
-  # Chỉ chạy khi:
-  # - branch là main
-  # - không phải cron
+  #
+  # Chạy khi:
+  # - branch là main hoặc develop
+  # - cron cũng được deploy
+  #
+  # Lưu ý:
+  # - report của main / develop / cron dùng chung 1 site
+  # - chạy sau sẽ đạp report của lần chạy trước
   # -------------------------------------------------
   deploy-report:
     needs: merge-report
-    if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
 
     permissions:
@@ -282,7 +287,7 @@ jobs:
           }
           EOF
 
-          
+
   # -------------------------------------------------
   # Gửi thông báo Telegram
   # -------------------------------------------------
