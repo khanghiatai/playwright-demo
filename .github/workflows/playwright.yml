@@ -87,12 +87,6 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
 
-    # ✅ EXPORT SUMMARY SAU MERGE (matrix không export được)
-    outputs:
-      passed: ${{ steps.summary.outputs.passed }}
-      failed: ${{ steps.summary.outputs.failed }}
-      skipped: ${{ steps.summary.outputs.skipped }}
-
     steps:
       - uses: actions/checkout@v5
 
@@ -131,24 +125,6 @@ jobs:
           name: playwright-report
           path: playwright-report
           retention-days: 7
-
-      # ✅ Extract summary từ report đã merge (FULL DATA)
-      - name: Extract final summary
-        id: summary
-        run: |
-          if [ -f playwright-report/test-results.json ]; then
-            PASSED=$(jq '[.. | objects | select(.status? == "passed")] | length' playwright-report/test-results.json)
-            FAILED=$(jq '[.. | objects | select(.status? == "failed")] | length' playwright-report/test-results.json)
-            SKIPPED=$(jq '[.. | objects | select(.status? == "skipped")] | length' playwright-report/test-results.json)
-          else
-            PASSED=0
-            FAILED=0
-            SKIPPED=0
-          fi
-
-          echo "passed=$PASSED" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
 
   # 👉 Deploy report lên GitHub Pages (chỉ main)
@@ -204,10 +180,6 @@ jobs:
           ICON="❌"
         fi
 
-        PASSED="${{ needs.merge-report.outputs.passed }}"
-        FAILED="${{ needs.merge-report.outputs.failed }}"
-        SKIPPED="${{ needs.merge-report.outputs.skipped }}"
-
         # ⚠️ FIX nhỏ: cron checkout develop nhưng github.ref_name vẫn là main
         BRANCH="${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}"
 
@@ -226,9 +198,6 @@ jobs:
                 \"fields\": [
                   {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
                   {\"title\": \"Branch\", \"value\": \"$BRANCH\", \"short\": true},
-                  {\"title\": \"Passed\", \"value\": \"$PASSED\", \"short\": true},
-                  {\"title\": \"Failed\", \"value\": \"$FAILED\", \"short\": true},
-                  {\"title\": \"Skipped\", \"value\": \"$SKIPPED\", \"short\": true},
                   {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
                   {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
                 ]
@@ -257,10 +226,6 @@ jobs:
             ICON="❌"
           fi
 
-          PASSED="${{ needs.merge-report.outputs.passed }}"
-          FAILED="${{ needs.merge-report.outputs.failed }}"
-          SKIPPED="${{ needs.merge-report.outputs.skipped }}"
-
           # ⚠️ FIX nhỏ giống Slack
           BRANCH="${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}"
 
@@ -272,11 +237,6 @@ jobs:
 
           Repository: ${{ github.repository }}
           Branch: $BRANCH
-
-          📊 Test Summary
-          • Passed: $PASSED
-          • Failed: $FAILED
-          • Skipped: $SKIPPED
 
           🔗 Actions: $ACTION_URL
           📈 Report: $REPORT_URL
