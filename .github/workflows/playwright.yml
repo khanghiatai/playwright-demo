@@ -267,10 +267,10 @@ jobs:
               \"attachments\": [
                 {
                   \"color\": \"$COLOR\",
-                  \"title\": \"$ICON Playwright CI $STATUS\",
+                  \"title\": \"Playwright CI $STATUS $ICON\",
                   \"fields\": [
-                    {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
-                    {\"title\": \"Branch\", \"value\": \"$BRANCH\", \"short\": true},
+                    {\"title\": \"• Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                    {\"title\": \"• Branch\", \"value\": \"$BRANCH\", \"short\": true},
                     {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
                     {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
                   ]
@@ -296,9 +296,11 @@ jobs:
 
           if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
+            COLOR="#36a64f"
             ICON="✅"
           else
             STATUS="FAILED"
+            COLOR="#ff0000"
             ICON="❌"
           fi
 
@@ -310,8 +312,8 @@ jobs:
           MESSAGE=$(printf "🎭 Playwright CI %s %s\n\nRepository: %s\nBranch: %s\n\n🔗 Actions: %s\n📈 Report: %s" \
             "$STATUS" \
             "$ICON" \
-            "${{ github.repository }}" \
-            "$BRANCH" \
+            "• ${{ github.repository }}" \
+            "• $BRANCH" \
             "$ACTION_URL" \
             "$REPORT_URL")
 
