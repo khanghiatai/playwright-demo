@@ -72,6 +72,30 @@ jobs:
           path: blob-report
           retention-days: 1
 
+      - name: Extract Playwright summary
+        id: summary
+        if: always()
+        run: |
+          if [ -f playwright-report/data/test-results.json ]; then
+            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/data/test-results.json)
+            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/data/test-results.json)
+            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/data/test-results.json)
+          else
+            PASSED=0
+            FAILED=0
+            SKIPPED=0
+          fi
+
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+
+          outputs:
+            passed: ${{ steps.summary.outputs.passed }}
+            failed: ${{ steps.summary.outputs.failed }}
+            skipped: ${{ steps.summary.outputs.skipped }}
+
+
   # 👉 Merge tất cả shard thành 1 HTML report duy nhất
   merge-report:
     if: always()
@@ -140,7 +164,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
 
-  notify:
+  notify-slack:
     needs: deploy-report
     runs-on: ubuntu-latest
     if: always()
