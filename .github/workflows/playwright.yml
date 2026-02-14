@@ -238,7 +238,7 @@ jobs:
   # Gửi thông báo Slack
   # -------------------------------------------------
   notify-slack:
-    if: always() && github.event_name != 'merge_group'needs: [test, merge-report, deploy-report]
+    needs: [test, merge-report, deploy-report]
     runs-on: ubuntu-latest
     if: always()
     continue-on-error: true
@@ -292,7 +292,7 @@ jobs:
   # Gửi thông báo Telegram
   # -------------------------------------------------
   notify-telegram:
-    if: always() && github.event_name != 'merge_group'needs: [test, merge-report, deploy-report]
+    needs: [test, merge-report, deploy-report]
     runs-on: ubuntu-latest
     if: always()
     continue-on-error: true
