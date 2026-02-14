@@ -12,7 +12,7 @@ on:
 
   # 👉 Cron chạy mỗi ngày
   schedule:
-    - cron: "0 1 * * *" 
+    - cron: "0 1 * * *"
 
 jobs:
   test:
@@ -72,6 +72,8 @@ jobs:
           path: blob-report
           retention-days: 1
 
+      # ❌ REMOVE outputs block (gây fail CI)
+      # 👉 Extract summary chỉ để dùng trong job này (không export outputs)
       - name: Extract Playwright summary
         id: summary
         if: always()
@@ -89,11 +91,6 @@ jobs:
           echo "passed=$PASSED" >> $GITHUB_OUTPUT
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-
-          outputs:
-            passed: ${{ steps.summary.outputs.passed }}
-            failed: ${{ steps.summary.outputs.failed }}
-            skipped: ${{ steps.summary.outputs.skipped }}
 
 
   # 👉 Merge tất cả shard thành 1 HTML report duy nhất
@@ -138,6 +135,7 @@ jobs:
           name: playwright-report-${{ vars.ENV }}
           path: playwright-report
           retention-days: 30
+
 
   # 👉 Deploy report lên GitHub Pages (chỉ main)
   deploy-report:
@@ -213,7 +211,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     continue-on-error: true
-    
+
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
