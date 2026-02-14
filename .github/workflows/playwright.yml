@@ -120,9 +120,9 @@ jobs:
         id: summary
         run: |
           if [ -f playwright-report/test-results.json ]; then
-            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/test-results.json)
-            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/test-results.json)
-            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/test-results.json)
+            PASSED=$(jq '[.. | objects | select(.status? == "passed")] | length' playwright-report/test-results.json)
+            FAILED=$(jq '[.. | objects | select(.status? == "failed")] | length' playwright-report/test-results.json)
+            SKIPPED=$(jq '[.. | objects | select(.status? == "skipped")] | length' playwright-report/test-results.json)
           else
             PASSED=0
             FAILED=0
@@ -133,7 +133,7 @@ jobs:
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
-          
+
   # 👉 Deploy report lên GitHub Pages (chỉ main)
   deploy-report:
     needs: merge-report
