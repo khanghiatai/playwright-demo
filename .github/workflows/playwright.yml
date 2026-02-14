@@ -1,69 +1,109 @@
 name: Playwright Tests
 
 on:
+  # -------------------------------------------------
+  # Chạy khi push lên 2 branch chính
+  # -------------------------------------------------
   push:
     branches: [main, develop]
 
+  # -------------------------------------------------
+  # Hỗ trợ merge queue (merge_group event)
+  # -------------------------------------------------
   merge_group:
     branches: [main, develop]
 
-  # re-register cron
+  # -------------------------------------------------
+  # Cho phép chạy tay
+  # -------------------------------------------------
   workflow_dispatch:
 
-  # 👉 Cron chạy mỗi ngày
+  # -------------------------------------------------
+  # Cron chạy mỗi ngày lúc 01:00 UTC
+  # -------------------------------------------------
   schedule:
     - cron: "0 1 * * *"
 
 jobs:
   test:
+    # -------------------------------------------------
+    # Giới hạn tối đa 60 phút cho toàn bộ job test
+    # -------------------------------------------------
     timeout-minutes: 60
     runs-on: ubuntu-latest
 
-    # 👉 Cron luôn dùng staging (tránh bị hiểu nhầm là main)
-    # ✅ FIX: dùng github.ref thay vì github.ref_name
-    # ✅ FIX: viết 1 dòng để tránh lỗi YAML
-    # ✅ FIX (NEW): dùng startsWith để support merge_group (merge queue tạo ref đặc biệt)
-    environment: ${{ github.event_name == 'schedule' && 'staging' || startsWith(github.ref, 'refs/heads/main') && 'production' || startsWith(github.ref, 'refs/heads/develop') && 'staging' }}
+    # -------------------------------------------------
+    # Resolve GitHub Environment cho job
+    #
+    # Quy ước:
+    # - main    -> staging
+    # - develop -> develop
+    # - cron    -> staging
+    #
+    # Lý do dùng github.ref + startsWith:
+    # - merge_group tạo ref đặc biệt
+    # - tránh sai khi dùng github.ref_name
+    # -------------------------------------------------
+    environment: ${{ github.event_name == 'schedule' && 'staging' || startsWith(github.ref, 'refs/heads/main') && 'staging' || startsWith(github.ref, 'refs/heads/develop') && 'develop' }}
 
-    # 👉 Chia test thành 4 shard để chạy song song
+    # -------------------------------------------------
+    # Chạy song song 4 shard
+    # -------------------------------------------------
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
 
     env:
-      # ⚠️ Biến này lấy từ GitHub Environment (staging / production)
-      # 👉 Chỉ đúng khi environment phía trên resolve đúng
+      # -------------------------------------------------
+      # vars.* lấy từ GitHub Environment đã resolve ở trên
+      # (staging hoặc develop)
+      # -------------------------------------------------
       ENV: ${{ vars.ENV }}
-
-      # ✅ NEW: Base URL cho Playwright (production/staging tùy environment)
       BASE_URL: ${{ vars.BASE_URL }}
 
+      # -------------------------------------------------
+      # secrets dùng chung cho cả 2 environment
+      # -------------------------------------------------
       EMAIL: ${{ secrets.EMAIL }}
       PASSWORD: ${{ secrets.PASSWORD }}
 
     steps:
-      # 👉 Cron checkout develop
-      # ⚠️ Lưu ý: github.ref_name của cron vẫn là main
-      # → nên phải ép checkout develop để test đúng staging
+      # -------------------------------------------------
+      # Checkout đúng branch đang trigger workflow
+      # (cron vẫn checkout main)
+      # -------------------------------------------------
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}
+          ref: ${{ github.ref_name }}
 
+      # -------------------------------------------------
+      # Cài NodeJS (LTS) + cache npm
+      # -------------------------------------------------
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: lts/*
           cache: npm
 
+      # -------------------------------------------------
+      # Cài dependency theo package-lock.json
+      # -------------------------------------------------
       - name: Install dependencies
         run: npm ci
 
+      # -------------------------------------------------
+      # Cài browser cho Playwright
+      # -------------------------------------------------
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 👉 Chạy test theo shard + tạo blob report để merge sau
+      # -------------------------------------------------
+      # Chạy test theo từng shard
+      # --reporter=blob để tạo report trung gian
+      # dùng cho bước merge phía sau
+      # -------------------------------------------------
       - name: Run Playwright tests (Shard ${{ matrix.shard }})
         run: |
           npx playwright test \
@@ -71,7 +111,9 @@ jobs:
             --reporter=blob \
             --retries=1
 
-      # 👉 Upload blob report tạm thời (dùng để merge)
+      # -------------------------------------------------
+      # Upload blob report của từng shard
+      # -------------------------------------------------
       - name: Upload blob report
         if: always()
         uses: actions/upload-artifact@v4
@@ -81,44 +123,64 @@ jobs:
           retention-days: 1
 
 
-  # 👉 Merge tất cả shard thành 1 HTML report duy nhất
+  # -------------------------------------------------
+  # Job merge report từ tất cả shard
+  # -------------------------------------------------
   merge-report:
     if: always()
     needs: test
     runs-on: ubuntu-latest
 
     steps:
+      # -------------------------------------------------
+      # Checkout repo để dùng playwright CLI
+      # -------------------------------------------------
       - uses: actions/checkout@v5
 
+      # -------------------------------------------------
+      # Cài NodeJS
+      # -------------------------------------------------
       - uses: actions/setup-node@v5
         with:
           node-version: lts/*
 
+      # -------------------------------------------------
+      # Cài dependency để có playwright CLI
+      # -------------------------------------------------
       - name: Install dependencies
         run: npm ci
 
-      # 👉 Download toàn bộ blob report từ các shard
+      # -------------------------------------------------
+      # Download toàn bộ blob report từ các shard
+      # -------------------------------------------------
       - name: Download blob reports
         uses: actions/download-artifact@v4
         with:
           path: all-blob-reports
 
-      # 👉 FIX: Flatten tất cả file blob report vào 1 folder chung
-      # ⚠️ Playwright merge-reports yêu cầu tất cả blob ở cùng 1 folder
+      # -------------------------------------------------
+      # Gom toàn bộ file blob vào 1 folder
+      # vì playwright merge-reports yêu cầu
+      # tất cả blob nằm chung 1 thư mục
+      # -------------------------------------------------
       - name: Prepare blob reports
         run: |
           mkdir merged-blobs
           find all-blob-reports -type f -exec cp {} merged-blobs/ \;
 
-      # 👉 Merge thành HTML duy nhất
-      - name: Merge reports thành HTML duy nhất
+      # -------------------------------------------------
+      # Merge blob report thành report HTML + JSON
+      # -------------------------------------------------
+      - name: Merge reports
         run: |
           npx playwright merge-reports \
-          --reporter html,json \
-          ./merged-blobs
+            --reporter html,json \
+            ./merged-blobs
 
-      # ✅ NEW (BẮT BUỘC): Upload report đã merge để job deploy dùng
-      # ⚠️ Nếu không có bước này thì deploy-report sẽ FAIL vì không tìm thấy artifact
+      # -------------------------------------------------
+      # Upload report đã merge
+      # dùng cho job deploy-report phía sau
+      # -------------------------------------------------
       - name: Upload merged report
         uses: actions/upload-artifact@v4
         with:
@@ -127,14 +189,15 @@ jobs:
           retention-days: 7
 
 
-  # 👉 Deploy report lên GitHub Pages (chỉ main)
+  # -------------------------------------------------
+  # Deploy report lên GitHub Pages
+  # Chỉ chạy khi:
+  # - branch là main
+  # - không phải cron
+  # -------------------------------------------------
   deploy-report:
     needs: merge-report
-
-    # ✅ FIX (NEW): không deploy khi là cron
-    # 👉 Cron chỉ dùng để test staging
     if: github.ref == 'refs/heads/main' && github.event_name != 'schedule'
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -142,22 +205,33 @@ jobs:
       id-token: write
 
     steps:
+      # -------------------------------------------------
+      # Download report đã merge
+      # -------------------------------------------------
       - name: Download final report
         uses: actions/download-artifact@v4
         with:
-          # ⚠️ Phải trùng đúng tên artifact đã upload ở job merge-report
           name: playwright-report
           path: ./public
 
+      # -------------------------------------------------
+      # Upload artifact cho GitHub Pages
+      # -------------------------------------------------
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./public
 
+      # -------------------------------------------------
+      # Deploy lên GitHub Pages
+      # -------------------------------------------------
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
 
 
+  # -------------------------------------------------
+  # Gửi thông báo Slack
+  # -------------------------------------------------
   notify-slack:
     needs: [merge-report, deploy-report]
     runs-on: ubuntu-latest
@@ -166,47 +240,49 @@ jobs:
     environment: slack
 
     steps:
-    - name: Send Slack notification
-      run: |
-        RESULT="${{ needs.merge-report.result }}"
+      - name: Send Slack notification
+        run: |
+          RESULT="${{ needs.merge-report.result }}"
 
-        if [ "$RESULT" = "success" ]; then
-          STATUS="PASSED"
-          COLOR="#36a64f"
-          ICON="✅"
-        else
-          STATUS="FAILED"
-          COLOR="#ff0000"
-          ICON="❌"
-        fi
+          if [ "$RESULT" = "success" ]; then
+            STATUS="PASSED"
+            COLOR="#36a64f"
+            ICON="✅"
+          else
+            STATUS="FAILED"
+            COLOR="#ff0000"
+            ICON="❌"
+          fi
 
-        # ⚠️ FIX nhỏ: cron checkout develop nhưng github.ref_name vẫn là main
-        BRANCH="${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}"
+          BRANCH="${{ github.ref_name }}"
 
-        ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-        WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
+          WEBHOOK="${{ secrets.SLACK_WEBHOOK_URL }}"
 
-        curl -X POST \
-          -H "Content-type: application/json" \
-          --data "{
-            \"attachments\": [
-              {
-                \"color\": \"$COLOR\",
-                \"title\": \"$ICON Playwright CI $STATUS\",
-                \"fields\": [
-                  {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
-                  {\"title\": \"Branch\", \"value\": \"$BRANCH\", \"short\": true},
-                  {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
-                  {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
-                ]
-              }
-            ]
-          }" \
-          "$WEBHOOK"
+          curl -X POST \
+            -H "Content-type: application/json" \
+            --data "{
+              \"attachments\": [
+                {
+                  \"color\": \"$COLOR\",
+                  \"title\": \"$ICON Playwright CI $STATUS\",
+                  \"fields\": [
+                    {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
+                    {\"title\": \"Branch\", \"value\": \"$BRANCH\", \"short\": true},
+                    {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
+                    {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
+                  ]
+                }
+              ]
+            }" \
+            "$WEBHOOK"
 
 
+  # -------------------------------------------------
+  # Gửi thông báo Telegram
+  # -------------------------------------------------
   notify-telegram:
     needs: [merge-report, deploy-report]
     runs-on: ubuntu-latest
@@ -226,23 +302,22 @@ jobs:
             ICON="❌"
           fi
 
-          # ⚠️ FIX nhỏ giống Slack
-          BRANCH="${{ github.event_name == 'schedule' && 'develop' || github.ref_name }}"
+          BRANCH="${{ github.ref_name }}"
 
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
           MESSAGE=$(cat <<EOF
-          🎭 Playwright CI $STATUS $ICON
+        🎭 Playwright CI $STATUS $ICON
 
-          Repository: ${{ github.repository }}
-          Branch: $BRANCH
+        Repository: ${{ github.repository }}
+        Branch: $BRANCH
 
-          🔗 Actions: $ACTION_URL
-          📈 Report: $REPORT_URL
-          EOF
-          )
+        🔗 Actions: $ACTION_URL
+        📈 Report: $REPORT_URL
+        EOF
+                  )
 
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-            -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-            --data-urlencode text="$MESSAGE"
+                  curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                    -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                    --data-urlencode text="$MESSAGE"
