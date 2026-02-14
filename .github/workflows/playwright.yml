@@ -207,79 +207,49 @@ jobs:
           "$WEBHOOK"
 
   notify-telegram:
-    needs: deploy-report
-    runs-on: ubuntu-latest
-    if: always()
-    continue-on-error: true
+  needs: [test, deploy-report]
+  runs-on: ubuntu-latest
+  if: always()
+  continue-on-error: true
 
-    steps:
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+  steps:
+    - name: Send Telegram notification
+      run: |
+        RESULT="${{ needs.test.result }}"
 
-      - name: Extract Playwright summary
-        id: summary
-        run: |
-          if [ -f playwright-report/data/test-results.json ]; then
-            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/data/test-results.json)
-            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/data/test-results.json)
-            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/data/test-results.json)
-          else
-            PASSED=0
-            FAILED=0
-            SKIPPED=0
-          fi
+        if [ "$RESULT" = "success" ]; then
+          STATUS="PASSED"
+          ICON="✅"
+        else
+          STATUS="FAILED"
+          ICON="❌"
+        fi
 
-          echo "passed=$PASSED" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+        ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-      - name: Send Telegram notification
-        run: |
-          RESULT="${{ needs.deploy-report.result }}"
+        PASSED="${{ needs.test.outputs.passed }}"
+        FAILED="${{ needs.test.outputs.failed }}"
+        SKIPPED="${{ needs.test.outputs.skipped }}"
 
-          if [ "$RESULT" = "success" ]; then
-            STATUS="PASSED"
-            ICON="✅"
-          else
-            STATUS="FAILED"
-            ICON="❌"
-          fi
+        MESSAGE=$(cat <<EOF
+🎭 Playwright CI $STATUS $ICON
 
-          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+Repository: ${{ github.repository }}
+Branch: ${{ github.ref_name }}
 
-          PASSED="${{ needs.test.outputs.passed }}"
-          FAILED="${{ needs.test.outputs.failed }}"
-          SKIPPED="${{ needs.test.outputs.skipped }}"
+📊 Test Summary
+• Passed: $PASSED
+• Failed: $FAILED
+• Skipped: $SKIPPED
 
+🔗 Actions: $ACTION_URL
+📈 Report: $REPORT_URL
+EOF
+)
 
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            TRIGGER="🕒 Scheduled (Cron)"
-          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TRIGGER="👤 Manual Trigger"
-          else
-            TRIGGER="🚀 Push"
-          fi
+        curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          --data-urlencode text="$MESSAGE"
 
-          MESSAGE=$(cat <<EOF
-          🎭 *Playwright CI $STATUS* $ICON
-
-          *Repository:* \`${{ github.repository }}\`
-          *Branch:* \`${{ github.ref_name }}\`
-          *Trigger:* $TRIGGER
-
-          📊 *Test Summary*
-          • Passed: $PASSED
-          • Failed: $FAILED
-          • Skipped: $SKIPPED
-
-          🔗 [View Actions]($ACTION_URL)
-          📈 [View Report]($REPORT_URL)
-          EOF
-          )
-
-                  curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                    -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-                    -d parse_mode="Markdown" \
-                    --data-urlencode text="$MESSAGE"
             
