@@ -72,32 +72,18 @@ jobs:
           path: blob-report
           retention-days: 1
 
-      # ❌ REMOVE outputs block (gây fail CI)
-      # 👉 Extract summary chỉ để dùng trong job này (không export outputs)
-      - name: Extract Playwright summary
-        id: summary
-        if: always()
-        run: |
-          if [ -f playwright-report/data/test-results.json ]; then
-            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/data/test-results.json)
-            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/data/test-results.json)
-            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/data/test-results.json)
-          else
-            PASSED=0
-            FAILED=0
-            SKIPPED=0
-          fi
-
-          echo "passed=$PASSED" >> $GITHUB_OUTPUT
-          echo "failed=$FAILED" >> $GITHUB_OUTPUT
-          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
-
 
   # 👉 Merge tất cả shard thành 1 HTML report duy nhất
   merge-report:
     if: always()
     needs: test
     runs-on: ubuntu-latest
+
+    # ✅ EXPORT SUMMARY SAU MERGE (matrix không export được)
+    outputs:
+      passed: ${{ steps.summary.outputs.passed }}
+      failed: ${{ steps.summary.outputs.failed }}
+      skipped: ${{ steps.summary.outputs.skipped }}
 
     steps:
       - uses: actions/checkout@v5
@@ -127,6 +113,24 @@ jobs:
           npx playwright merge-reports \
             --reporter html \
             ./merged-blobs
+
+      # ✅ Extract summary từ report đã merge (FULL DATA)
+      - name: Extract final summary
+        id: summary
+        run: |
+          if [ -f playwright-report/data/test-results.json ]; then
+            PASSED=$(jq '[.suites[].specs[].tests[] | select(.status=="passed")] | length' playwright-report/data/test-results.json)
+            FAILED=$(jq '[.suites[].specs[].tests[] | select(.status=="failed")] | length' playwright-report/data/test-results.json)
+            SKIPPED=$(jq '[.suites[].specs[].tests[] | select(.status=="skipped")] | length' playwright-report/data/test-results.json)
+          else
+            PASSED=0
+            FAILED=0
+            SKIPPED=0
+          fi
+
+          echo "passed=$PASSED" >> $GITHUB_OUTPUT
+          echo "failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
       # 👉 Upload HTML report (để download thủ công nếu cần)
       - name: Upload final HTML report
@@ -162,16 +166,18 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
 
+
   notify-slack:
-    needs: deploy-report
+    needs: [merge-report, deploy-report]
     runs-on: ubuntu-latest
     if: always()
+    continue-on-error: true
     environment: slack
 
     steps:
     - name: Send Slack notification
       run: |
-        RESULT="${{ job.status }}"
+        RESULT="${{ needs.merge-report.result }}"
 
         if [ "$RESULT" = "success" ]; then
           STATUS="PASSED"
@@ -182,6 +188,10 @@ jobs:
           COLOR="#ff0000"
           ICON="❌"
         fi
+
+        PASSED="${{ needs.merge-report.outputs.passed }}"
+        FAILED="${{ needs.merge-report.outputs.failed }}"
+        SKIPPED="${{ needs.merge-report.outputs.skipped }}"
 
         ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
@@ -198,6 +208,9 @@ jobs:
                 \"fields\": [
                   {\"title\": \"Repository\", \"value\": \"${{ github.repository }}\", \"short\": true},
                   {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                  {\"title\": \"Passed\", \"value\": \"$PASSED\", \"short\": true},
+                  {\"title\": \"Failed\", \"value\": \"$FAILED\", \"short\": true},
+                  {\"title\": \"Skipped\", \"value\": \"$SKIPPED\", \"short\": true},
                   {\"title\": \"Actions\", \"value\": \"$ACTION_URL\", \"short\": false},
                   {\"title\": \"Report\", \"value\": \"$REPORT_URL\", \"short\": false}
                 ]
@@ -206,8 +219,9 @@ jobs:
           }" \
           "$WEBHOOK"
 
+
   notify-telegram:
-    needs: [test, deploy-report]
+    needs: [merge-report, deploy-report]
     runs-on: ubuntu-latest
     if: always()
     continue-on-error: true
@@ -215,7 +229,7 @@ jobs:
     steps:
       - name: Send Telegram notification
         run: |
-          RESULT="${{ needs.test.result }}"
+          RESULT="${{ needs.merge-report.result }}"
 
           if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
@@ -225,12 +239,12 @@ jobs:
             ICON="❌"
           fi
 
+          PASSED="${{ needs.merge-report.outputs.passed }}"
+          FAILED="${{ needs.merge-report.outputs.failed }}"
+          SKIPPED="${{ needs.merge-report.outputs.skipped }}"
+
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-
-          PASSED="${{ needs.test.outputs.passed }}"
-          FAILED="${{ needs.test.outputs.failed }}"
-          SKIPPED="${{ needs.test.outputs.skipped }}"
 
           MESSAGE=$(cat <<EOF
           🎭 Playwright CI $STATUS $ICON
@@ -248,8 +262,6 @@ jobs:
           EOF
           )
 
-                  curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-                    -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-                    --data-urlencode text="$MESSAGE"
-          
-            
+                    curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                      -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                      --data-urlencode text="$MESSAGE"
