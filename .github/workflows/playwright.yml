@@ -202,7 +202,7 @@ jobs:
   # -------------------------------------------------
   deploy-report:
     needs: merge-report
-    if: github.event_name != 'merge_group'
+    if: always() && github.event_name != 'merge_group'
     runs-on: ubuntu-latest
 
     permissions:
@@ -250,7 +250,7 @@ jobs:
         run: |
           set -e
 
-          RESULT="${{ needs.merge-report.result }}"
+          RESULT="${{ needs.test.result }}"
 
           if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
@@ -300,7 +300,7 @@ jobs:
     steps:
       - name: Send Telegram notification
         run: |
-          RESULT="${{ needs.merge-report.result }}"
+          RESULT="${{ needs.test.result }}"
 
           if [ "$RESULT" = "success" ]; then
             STATUS="PASSED"
