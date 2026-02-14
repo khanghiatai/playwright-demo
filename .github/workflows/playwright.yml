@@ -212,7 +212,8 @@ jobs:
     needs: deploy-report
     runs-on: ubuntu-latest
     if: always()
-
+    continue-on-error: true
+    
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -249,9 +250,10 @@ jobs:
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          PASSED="${{ steps.summary.outputs.passed }}"
-          FAILED="${{ steps.summary.outputs.failed }}"
-          SKIPPED="${{ steps.summary.outputs.skipped }}"
+          PASSED="${{ needs.test.outputs.passed }}"
+          FAILED="${{ needs.test.outputs.failed }}"
+          SKIPPED="${{ needs.test.outputs.skipped }}"
+
 
           if [ "${{ github.event_name }}" = "schedule" ]; then
             TRIGGER="🕒 Scheduled (Cron)"
