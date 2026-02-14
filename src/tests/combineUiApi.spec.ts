@@ -15,13 +15,13 @@ test.describe('Test API & UI', () => {
         // call API create 
         const slug = await articleApi.createArticle()
         test.skip(!slug)
-        // await page.goto(`/article/${slug}`)
+        await page.goto(`/article/${slug}`)
 
         // update article on page 
         await manager.artile().updateArticlePage()
         
         // call API delete
-        await articleApi.deleteArticle('slug')
+        await articleApi.deleteArticle(slug)
     })
 })
 
