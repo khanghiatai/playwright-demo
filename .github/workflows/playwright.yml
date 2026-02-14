@@ -207,49 +207,49 @@ jobs:
           "$WEBHOOK"
 
   notify-telegram:
-  needs: [test, deploy-report]
-  runs-on: ubuntu-latest
-  if: always()
-  continue-on-error: true
+    needs: [test, deploy-report]
+    runs-on: ubuntu-latest
+    if: always()
+    continue-on-error: true
 
-  steps:
-    - name: Send Telegram notification
-      run: |
-        RESULT="${{ needs.test.result }}"
+    steps:
+      - name: Send Telegram notification
+        run: |
+          RESULT="${{ needs.test.result }}"
 
-        if [ "$RESULT" = "success" ]; then
-          STATUS="PASSED"
-          ICON="✅"
-        else
-          STATUS="FAILED"
-          ICON="❌"
-        fi
+          if [ "$RESULT" = "success" ]; then
+            STATUS="PASSED"
+            ICON="✅"
+          else
+            STATUS="FAILED"
+            ICON="❌"
+          fi
 
-        ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-        PASSED="${{ needs.test.outputs.passed }}"
-        FAILED="${{ needs.test.outputs.failed }}"
-        SKIPPED="${{ needs.test.outputs.skipped }}"
+          PASSED="${{ needs.test.outputs.passed }}"
+          FAILED="${{ needs.test.outputs.failed }}"
+          SKIPPED="${{ needs.test.outputs.skipped }}"
 
-        MESSAGE=$(cat <<EOF
-🎭 Playwright CI $STATUS $ICON
+          MESSAGE=$(cat <<EOF
+          🎭 Playwright CI $STATUS $ICON
 
-Repository: ${{ github.repository }}
-Branch: ${{ github.ref_name }}
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref_name }}
 
-📊 Test Summary
-• Passed: $PASSED
-• Failed: $FAILED
-• Skipped: $SKIPPED
+          📊 Test Summary
+          • Passed: $PASSED
+          • Failed: $FAILED
+          • Skipped: $SKIPPED
 
-🔗 Actions: $ACTION_URL
-📈 Report: $REPORT_URL
-EOF
-)
+          🔗 Actions: $ACTION_URL
+          📈 Report: $REPORT_URL
+          EOF
+          )
 
-        curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          --data-urlencode text="$MESSAGE"
-
+                  curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                    -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                    --data-urlencode text="$MESSAGE"
+          
             
