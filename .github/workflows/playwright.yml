@@ -244,7 +244,7 @@ jobs:
         run: |
           RESULT="${{ needs.merge-report.result }}"
 
-          if [ "$RESULT" = "success" ]; then
+          if [ "$RESULT" = "success" ]
             STATUS="PASSED"
             COLOR="#36a64f"
             ICON="✅"
@@ -294,7 +294,7 @@ jobs:
         run: |
           RESULT="${{ needs.merge-report.result }}"
 
-          if [ "$RESULT" = "success" ]; then
+          if [ "$RESULT" = "success" ]
             STATUS="PASSED"
             COLOR="#36a64f"
             ICON="✅"
@@ -309,11 +309,11 @@ jobs:
           ACTION_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           REPORT_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
 
-          MESSAGE=$(printf "🎭 Playwright CI %s %s\n\nRepository: %s\nBranch: %s\n\n🔗 Actions: %s\n📈 Report: %s" \
+          MESSAGE=$(printf "🎭 Playwright CI %s %s\n\n• Repository: %s\n• Branch: %s\n\n🔗 Actions: %s\n📈 Report: %s" \
             "$STATUS" \
             "$ICON" \
-            "• ${{ github.repository }}" \
-            "• $BRANCH" \
+            " ${{ github.repository }}" \
+            " $BRANCH" \
             "$ACTION_URL" \
             "$REPORT_URL")
 
