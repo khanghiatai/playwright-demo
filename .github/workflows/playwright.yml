@@ -133,15 +133,7 @@ jobs:
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
 
-            # 👉 Upload HTML report (để download thủ công nếu cần)
-            - name: Upload final HTML report
-              uses: actions/upload-artifact@v4
-              with:
-                name: playwright-report-${{ vars.ENV }}
-                path: playwright-report
-                retention-days: 30
-
-
+          
   # 👉 Deploy report lên GitHub Pages (chỉ main)
   deploy-report:
     needs: merge-report
