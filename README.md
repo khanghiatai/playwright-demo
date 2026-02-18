@@ -11,7 +11,7 @@ Project automation testing using Playwright + TypeScript.
 
 ### LOGIN
   npm run login:api
-
+```
 .
 ├── playwright.config.ts
 ├── package.json
@@ -35,3 +35,4 @@ Project automation testing using Playwright + TypeScript.
 └── ci/
     └── github-actions.yml
 
+```
