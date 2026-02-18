@@ -1,8 +1,8 @@
 import {test} from '@playwright/test'
-import fs from 'fs'
-import user from '../../.auth/user.json'
+// import fs from 'fs'
+// import user from '../../.auth/user.json'
 
-const authFile = '.auth/user.json'
+// const authFile = '.auth/user.json'
 
 test('Login', async({request}) => {
     const response = await request.post('https://conduit-api.bondaracademy.com/api/users/login', {
@@ -10,7 +10,7 @@ test('Login', async({request}) => {
     })
     const responseLogin = await response.json()
     const token = responseLogin.user.token
-    user.origins[0].localStorage[0].value = token
-    fs.writeFileSync(authFile, JSON.stringify(user))
+    // user.origins[0].localStorage[0].value = token
+    // fs.writeFileSync(authFile, JSON.stringify(user))
     process.env['ACCEPT_TOKEN'] = token
 })

@@ -47,18 +47,22 @@ export default defineConfig({
   projects: [
     {
       name: 'auth-setup',
+      testMatch: 'auth-ui.setup.ts'
+    }, 
+    {
+      name: 'auth-api-setup',
       testMatch: 'auth-api.setup.ts'
     }, 
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
-      dependencies: ['auth-setup']
+      dependencies: ['auth-setup', 'auth-api-setup']
     },
 
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'], storageState: '.auth/user.json' },
-      dependencies: ['auth-setup']
+      dependencies: ['auth-setup', 'auth-api-setup']
     },
 
     // {
