@@ -22,7 +22,7 @@ on:
   # Cron chạy mỗi ngày lúc 01:00 UTC
   # -------------------------------------------------
   schedule: # VNTIME = + 9h40
-    - cron: "0 21 * * *"
+    - cron: "0 23 * * *"
 
 jobs:
   test:
